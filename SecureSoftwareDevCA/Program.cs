@@ -35,11 +35,54 @@ namespace SecureSoftwareDevCA
 
         public static void AdminLogin()
         {
-            //string menuSelection = "";
-            //while (menuSelection != "exit")
-            //{
 
-            //}
+            string menuSelection = "";
+            bool loggedIn = false;
+            string adminPassword = "password";
+            while (menuSelection != "exit")
+            {
+                Console.WriteLine("Please enter admin password or type exit to quit");
+                string password = Console.ReadLine();
+
+                if (password == adminPassword)
+                {
+                    loggedIn = true;
+                    menuSelection = "exit";
+                }
+
+                if(password == "exit")
+                {
+                    menuSelection = "exit";
+                }
+
+
+            }
+
+            if(loggedIn == true)
+            {
+                List<BankCustomer> users = GetBankCustomers();
+
+
+                users.ForEach(bank_account =>
+                {
+                    Console.WriteLine("|{0,20}|{1,20}|{2,20}|", bank_account.ID, bank_account.FirstName, bank_account.LastName);
+                });
+
+                Console.WriteLine("Select customer to view information of:");
+                string selectedAccount = Console.ReadLine();
+                Console.WriteLine(selectedAccount);
+
+                BankCustomer customer = users.FirstOrDefault(user => user.ID == selectedAccount);
+                Console.WriteLine("|{0,20}|{1,20}|{2,20}|", customer.ID, customer.FirstName, customer.LastName);
+
+
+
+            }
+
+        }
+
+        public static List<BankCustomer> GetBankCustomers()
+        {
             List<BankCustomer> users = new List<BankCustomer>();
 
             using (var reader = new StreamReader(@"bank_accounts.csv"))
@@ -55,16 +98,8 @@ namespace SecureSoftwareDevCA
                 }
             }
 
-            users.ForEach(bank_account =>
-            {
-                Console.WriteLine(bank_account.FirstName);
-            });
-
-
-
+            return users;
         }
-
-
 
 
     }
