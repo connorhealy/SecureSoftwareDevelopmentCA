@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace SecureSoftwareDevCA
 {
-    class BankCustomer : User
+    class Customer : User
     {
 
         public string Address { get; set; }
         public string IBAN { get; set; }
-        public string AccountBalance { get; set; }
+        public string LoanRemaining { get; set; }
         public string Password { get; set; }
 
-        public BankCustomer(string ID, string FirstName, string LastName, string EmailAddress, string Address, string IBAN, string AccountBalance, string Password)
+        public Customer(string Address, string IBAN, string LoanRemaining, string Password, string ID, string FirstName, string LastName, string EmailAddress)
         {
             this.ID = ID;
             this.FirstName = FirstName;
@@ -22,10 +22,10 @@ namespace SecureSoftwareDevCA
             this.EmailAddress = EmailAddress;
             this.Address = Address;
             this.IBAN = IBAN;
-            this.AccountBalance = AccountBalance;
+            this.LoanRemaining = LoanRemaining;
             this.Password = Password;
         }
-        public BankCustomer()
+        public Customer()
         {
 
         }
