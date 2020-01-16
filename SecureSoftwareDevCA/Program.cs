@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-using CsvHelper;
+
 
 namespace SecureSoftwareDevCA
 {
@@ -182,12 +182,7 @@ namespace SecureSoftwareDevCA
 
             Console.WriteLine($"Current loan amount is {customer.LoanRemaining}");
 
-            using (var writer = new StreamWriter("bank_accounts.csv"))
-            using (var csv = new CsvWriter(writer))
-            {
-                csv.Configuration.HasHeaderRecord = false;
-                csv.WriteRecords(users);
-            }
+            updateCSV(users);
 
             Console.ReadKey();
         }
@@ -200,12 +195,7 @@ namespace SecureSoftwareDevCA
             Customer customer = users.FirstOrDefault(user => user.ID == selectedAccount);
             users.Remove(customer);
 
-            using (var writer = new StreamWriter("bank_accounts.csv"))
-            using (var csv = new CsvWriter(writer))
-            {
-                csv.Configuration.HasHeaderRecord = false;
-                csv.WriteRecords(users);
-            }
+            updateCSV(users);
 
             Console.ReadKey();
         }
@@ -242,14 +232,22 @@ namespace SecureSoftwareDevCA
 
             users.Add(newCustomer);
 
-            using (var writer = new StreamWriter("bank_accounts.csv"))
-            using (var csv = new CsvWriter(writer))
-            {
-                csv.Configuration.HasHeaderRecord = false;
-                csv.WriteRecords(users);
-            }
+            updateCSV(users);
 
             Console.ReadKey();
+        }
+
+        private static void updateCSV(List<Customer> customers)
+        {
+            string docPath =
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            // Write the string array to a new file named "WriteLines.txt".
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "WriteLines.txt")))
+            {
+                foreach (Customer customer in customers)
+                    outputFile.WriteLine(customers);
+            }
         }
     }
 
