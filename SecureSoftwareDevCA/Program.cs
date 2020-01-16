@@ -17,12 +17,14 @@ namespace SecureSoftwareDevCA
             Console.WriteLine("1 - Admin");
             Console.WriteLine("2 - User");
 
-            switch (Console.ReadLine())
+            int selection;
+            Int32.TryParse(Console.ReadLine(), out selection);
+            switch (selection)
             {
-                case "1":
+                case 1:
                     AdminLogin();
                     break;
-                case "2":
+                case 2:
                     UserLogin();
                     break;
                 default:
@@ -31,6 +33,8 @@ namespace SecureSoftwareDevCA
             }
 
         }
+
+
 
         public static void UserLogin()
         {
@@ -59,7 +63,7 @@ namespace SecureSoftwareDevCA
 
             string menuSelection = "";
             bool loggedIn = false;
-            string adminPassword = "password";
+            string adminPassword = "admin_password123";
             while (menuSelection != "exit")
             {
                 Console.WriteLine("Please enter admin password or type \"exit\" to quit");
@@ -142,8 +146,8 @@ namespace SecureSoftwareDevCA
         public static List<Customer> GetCustomers()
         {
             List<Customer> users = new List<Customer>();
-
-            using (var reader = new StreamReader(@"bank_accounts.csv"))
+        
+            using (var reader = new StreamReader ( "bank_accounts.csv"))
             {
 
                 while (!reader.EndOfStream)
@@ -165,8 +169,19 @@ namespace SecureSoftwareDevCA
             string selectedAccount = Console.ReadLine();
 
             Customer customer = users.FirstOrDefault(user => user.ID == selectedAccount);
-            Console.WriteLine(" \n  Customer ID: {0} \n Customer Name: {1} {2} \n  Customer Address: {3} \n  Customer Loan Remaining: {4} \n", customer.ID, customer.FirstName, customer.LastName, customer.Address, customer.LoanRemaining);
-            Console.ReadKey();
+
+            if (customer != null)
+            {
+                Console.WriteLine(" \n  Customer ID: {0} \n Customer Name: {1} {2} \n  Customer Address: {3} \n  Customer Loan Remaining: {4} \n", customer.ID, customer.FirstName, customer.LastName, customer.Address, customer.LoanRemaining);
+                Console.ReadKey();
+            }
+
+            else
+            {
+                Console.WriteLine("Customer account does not exist");
+                Console.ReadKey();
+            }
+
         }
 
         private static void UpdateUsersLoanAmount(List<Customer> users)
@@ -176,28 +191,48 @@ namespace SecureSoftwareDevCA
             string selectedAccount = Console.ReadLine();
 
             Customer customer = users.FirstOrDefault(user => user.ID == selectedAccount);
-            Console.WriteLine($"Current loan amount is {customer.LoanRemaining}, please enter new loan amount");
-            string newLoanAmount = Console.ReadLine();
-            customer.LoanRemaining = newLoanAmount;
+            if (customer != null)
+            {
+                Console.WriteLine($"Current loan amount is {customer.LoanRemaining}, please enter new loan amount");
+                string newLoanAmount = Console.ReadLine();
+                customer.LoanRemaining = newLoanAmount;
 
-            Console.WriteLine($"Current loan amount is {customer.LoanRemaining}");
+                Console.WriteLine($"Current loan amount is {customer.LoanRemaining}");
 
-            updateCSV(users);
+                updateCSV(users);
 
-            Console.ReadKey();
+                Console.ReadKey();
+            }
+
+            else
+            {
+                Console.WriteLine("Customer account does not exist");
+                Console.ReadKey();
+            }
+
         }
 
         private static void DeleteUsersLoan(List<Customer> users)
         {
             Console.WriteLine("Select customer whose loan youd like to delete:");
             string selectedAccount = Console.ReadLine();
-
             Customer customer = users.FirstOrDefault(user => user.ID == selectedAccount);
-            users.Remove(customer);
+            if (customer != null)
+            {
 
-            updateCSV(users);
+                users.Remove(customer);
 
-            Console.ReadKey();
+                updateCSV(users);
+
+                Console.ReadKey();
+            }
+
+            else
+            {
+                Console.WriteLine("Customer account does not exist");
+                Console.ReadKey();
+            }
+
         }
 
         public static void AddNewUsersLoan(List<Customer> users)
@@ -205,25 +240,25 @@ namespace SecureSoftwareDevCA
             Console.WriteLine("Please enter users information");
 
             Console.WriteLine("Please enter first name:");
-            string firstName = Console.ReadLine();
-
+            string firstName = removeCharacter(Console.ReadLine(), ",");
+           
             Console.WriteLine("Please enter last name:");
-            string lastName = Console.ReadLine();
+            string lastName = removeCharacter(Console.ReadLine(), ",");
 
             Console.WriteLine("Please enter IBAN:");
-            string IBAN = Console.ReadLine();
+            string IBAN = removeCharacter(Console.ReadLine(), ",");
 
             Console.WriteLine("Please enter address:");
-            string address = Console.ReadLine();
+            string address = removeCharacter(Console.ReadLine(), ",");
 
             Console.WriteLine("Please enter email:");
-            string email = Console.ReadLine();
+            string email = removeCharacter(Console.ReadLine(), ",");
 
             Console.WriteLine("Please enter loan balance:");
-            string loanAmount = Console.ReadLine();
+            string loanAmount = removeCharacter(Console.ReadLine(), ",");
 
             Console.WriteLine("Please enter password:");
-            string password = Console.ReadLine();
+            string password = removeCharacter(Console.ReadLine(), ",");
 
             string id = (Convert.ToInt32(users.LastOrDefault().ID) + 1).ToString();
             Console.WriteLine($"id: {id}");
@@ -237,16 +272,18 @@ namespace SecureSoftwareDevCA
             Console.ReadKey();
         }
 
+        private static string removeCharacter(string text, string characterToRemove)
+        {
+            text = text.Replace(characterToRemove, "");
+            Console.WriteLine(text);
+            return text;
+        }
         private static void updateCSV(List<Customer> customers)
         {
-            string docPath =
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-
-            // Write the string array to a new file named "WriteLines.txt".
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "WriteLines.txt")))
+            using (StreamWriter bank_accounts = new StreamWriter("bank_accounts.csv"))
             {
                 foreach (Customer customer in customers)
-                    outputFile.WriteLine(customers);
+                    bank_accounts.WriteLine(customer.Address + "," + customer.IBAN + "," + customer.LoanRemaining + "," + customer.Password + "," + customer.ID + "," + customer.FirstName + "," + customer.LastName + "," + customer.EmailAddress);
             }
         }
     }
