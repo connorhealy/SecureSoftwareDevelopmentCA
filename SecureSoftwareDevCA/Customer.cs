@@ -6,14 +6,17 @@ using System.Threading.Tasks;
 
 namespace SecureSoftwareDevCA
 {
+    [Serializable]
     class Customer : User
     {
-
-        public string Address { get; set; }
-        public string IBAN { get; set; }
-        public string LoanRemaining { get; set; }
-        public string Password { get; set; }
-
+        public string Address { get; }
+        public string IBAN { get; }
+        public string LoanRemaining { get; }
+        public string Password { get; }
+        public new string FirstName { get; }
+        public new string ID { get; }
+        public new string LastName { get; }
+        public new string EmailAddress { get; }
         public Customer(string Address, string IBAN, string LoanRemaining, string Password, string ID, string FirstName, string LastName, string EmailAddress)
         {
             this.ID = ID;
@@ -25,10 +28,7 @@ namespace SecureSoftwareDevCA
             this.LoanRemaining = LoanRemaining;
             this.Password = Password;
         }
-        public Customer()
-        {
 
-        }
 
     }
 }
