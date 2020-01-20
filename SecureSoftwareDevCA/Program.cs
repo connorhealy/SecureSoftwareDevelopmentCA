@@ -8,12 +8,13 @@ using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
-
+using System.Runtime.InteropServices;
 namespace SecureSoftwareDevCA
 {
     class Program
     {
-       // public byte[] AesKey = []{}
+
+
         static void Main(string[] args)
         {
 
@@ -166,7 +167,8 @@ namespace SecureSoftwareDevCA
         private static List<Customer> GetCustomers()
         {
             List<Customer> users = new List<Customer>();
-
+            File.Delete("loans.csv");
+            FileDecrypt(@"loans.csv.aes", "loans.csv", "ThePasswordToDecryptAndEncryptTheFile");
             using (var reader = new StreamReader("loans.csv"))
             {
 
@@ -174,9 +176,6 @@ namespace SecureSoftwareDevCA
                 {
                     var line = reader.ReadLine();
                     var values = line.Split(',');
-
-                    //Customer tempCustomer = new Customer(getDecryptedString(values[0]), getDecryptedString(values[1]), getDecryptedString(values[2]), getDecryptedString(values[3]),
-                    //    getDecryptedString(values[4]), getDecryptedString(values[5]), getDecryptedString(values[6]), getDecryptedString(values[7]));
                     Customer tempCustomer = new Customer(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
 
                     users.Add(tempCustomer);
@@ -411,7 +410,6 @@ namespace SecureSoftwareDevCA
             Console.WriteLine("Please enter address:");
             string address = removeCharacter(Console.ReadLine(), ",");
 
-            // \b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b
             string email = null;
 
             bool emailRegexMatches = false;
@@ -472,24 +470,15 @@ namespace SecureSoftwareDevCA
         {
             if (customers.GetType() == typeof(List<Customer>))
             {
-                List<Customer> encryptedCustomers = new List<Customer>() { };
-                customers.ForEach(customer =>
-                {
-                    Customer encryptedCustomer = new Customer(getEncryptedString(customer.Address),
-                      getEncryptedString(customer.IBAN), getEncryptedString(customer.LoanRemaining), getEncryptedString(customer.Password),
-                      getEncryptedString(customer.ID), getEncryptedString(customer.FirstName), getEncryptedString(customer.LastName), getEncryptedString(customer.EmailAddress));
-
-                    encryptedCustomers.Add(encryptedCustomer);
-
-
-                });
-
 
                 using (StreamWriter bank_accounts = new StreamWriter("loans.csv"))
                 {
-                    foreach (Customer customer in encryptedCustomers)
+                    foreach (Customer customer in customers)
                         bank_accounts.WriteLine(customer.Address + "," + customer.IBAN + "," + customer.LoanRemaining + "," + customer.Password + "," + customer.ID + "," + customer.FirstName + "," + customer.LastName + "," + customer.EmailAddress);
                 }
+                string password = "ThePasswordToDecryptAndEncryptTheFile";
+                FileEncrypt(@"loans.csv", password);
+
             }
         }
 
@@ -519,7 +508,6 @@ namespace SecureSoftwareDevCA
             {
                 try
                 {
-                    //Decrypt the data using DataProtectionScope.CurrentUser.
                     return ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser);
                 }
                 catch (CryptographicException e)
@@ -581,112 +569,120 @@ namespace SecureSoftwareDevCA
 
         }
 
-        static byte[] EncryptAES(string plainText, byte[] Key, byte[] IV)
+        public static byte[] GenerateRandomSalt()
         {
+            byte[] data = new byte[32];
 
-            if (plainText == null || plainText.Length <= 0)
-                throw new ArgumentNullException("plainText");
-            if (Key == null || Key.Length <= 0)
-                throw new ArgumentNullException("Key");
-            if (IV == null || IV.Length <= 0)
-                throw new ArgumentNullException("IV");
-            byte[] encrypted;
-
-            
-            using (Aes aesEncrypt = Aes.Create())
+            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
             {
-                //aesEncrypt.Mode = CipherMode.CBC;
-                //aesEncrypt.KeySize = 128;
-                //aesEncrypt.BlockSize = 128;
-                //aesEncrypt.FeedbackSize = 128;
-                //aesEncrypt.Padding = PaddingMode.Zeros;
-                aesEncrypt.Key = Key;
-                
-                aesEncrypt.IV = IV;
-
-
-                ICryptoTransform encryptor = aesEncrypt.CreateEncryptor(aesEncrypt.Key, aesEncrypt.IV);
-
-                using (MemoryStream msEncrypt = new MemoryStream())
+                for (int i = 0; i < 10; i++)
                 {
-                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
-                    {
-                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
-                        {
-
-                            swEncrypt.Write(plainText);
-                        }
-                        encrypted = msEncrypt.ToArray();
-                    }
+                    rng.GetBytes(data);
                 }
             }
 
-
-            return encrypted;
-
+            return data;
         }
 
-        static string DecryptAES(byte[] cipherText, byte[] Key, byte[] IV)
+        private static void FileEncrypt(string inputFile, string password)
         {
 
-            if (cipherText == null || cipherText.Length <= 0)
-                throw new ArgumentNullException("cipherText");
-            if (Key == null || Key.Length <= 0)
-                throw new ArgumentNullException("Key");
-            if (IV == null || IV.Length <= 0)
-                throw new ArgumentNullException("IV");
+            byte[] salt = GenerateRandomSalt();
+            FileStream fsCrypt = new FileStream(inputFile + ".aes", FileMode.Create);
 
-            string plaintext = null;
+            byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+            RijndaelManaged AES = new RijndaelManaged();
+            AES.KeySize = 256;
+            AES.BlockSize = 128;
+            AES.Padding = PaddingMode.PKCS7;
+            var key = new Rfc2898DeriveBytes(passwordBytes, salt, 50000);
+            AES.Key = key.GetBytes(AES.KeySize / 8);
+            AES.IV = key.GetBytes(AES.BlockSize / 8);
+            AES.Mode = CipherMode.CFB;
+            fsCrypt.Write(salt, 0, salt.Length);
 
-            using (Aes aesDecrypt = Aes.Create())
+            CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateEncryptor(), CryptoStreamMode.Write);
+
+            FileStream fsIn = new FileStream(inputFile, FileMode.Open);
+
+            byte[] buffer = new byte[1048576];
+            int read;
+
+            try
             {
-                //aesDecrypt.Mode = CipherMode.CBC;
-                //aesDecrypt.KeySize = 128;
-                //aesDecrypt.BlockSize = 128;
-                //aesDecrypt.FeedbackSize = 128;
-                //aesDecrypt.Padding = PaddingMode.Zeros;
-                aesDecrypt.Key = Key;
-                aesDecrypt.IV = IV;
-
-                ICryptoTransform decryptor = aesDecrypt.CreateDecryptor(aesDecrypt.Key, aesDecrypt.IV);
-
-                using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                while ((read = fsIn.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
-                    {
-                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
-                        {
-                            plaintext = srDecrypt.ReadToEnd();
-                        }
-                    }
+                    cs.Write(buffer, 0, read);
                 }
 
+
+                fsIn.Close();
             }
-
-            return plaintext;
-
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+            }
+            finally
+            {
+                cs.Close();
+                fsCrypt.Close();
+                fsIn.Close();
+            }
         }
 
-        private static string getEncryptedString(string plaintext)
+        private static void FileDecrypt(string inputFile, string outputFile, string password)
         {
+            byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+            byte[] salt = new byte[32];
 
-            using (Aes myAes = Aes.Create())
+            FileStream fsCrypt = new FileStream(inputFile, FileMode.Open);
+            fsCrypt.Read(salt, 0, salt.Length);
+
+            RijndaelManaged AES = new RijndaelManaged();
+            AES.KeySize = 256;
+            AES.BlockSize = 128;
+            var key = new Rfc2898DeriveBytes(passwordBytes, salt, 50000);
+            AES.Key = key.GetBytes(AES.KeySize / 8);
+            AES.IV = key.GetBytes(AES.BlockSize / 8);
+            AES.Padding = PaddingMode.PKCS7;
+            AES.Mode = CipherMode.CFB;
+
+            CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateDecryptor(), CryptoStreamMode.Read);
+
+            FileStream fsOut = new FileStream(outputFile, FileMode.Create);
+
+            int read;
+            byte[] buffer = new byte[1048576];
+
+            try
             {
-                return Encoding.Default.GetString(EncryptAES(plaintext, myAes.Key, myAes.IV));
+                while ((read = cs.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    fsOut.Write(buffer, 0, read);
+                }
+            }
+            catch (CryptographicException ex_CryptographicException)
+            {
+                Console.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
             }
 
-        }
-        private static string getDecryptedString(string text)
-        {
-            string decryptedText = "";
-
-            using (Aes decryptAES = Aes.Create())
+            try
             {
-                byte[] bytes;
-                bytes = Encoding.Default.GetBytes(text);
-                decryptedText = DecryptAES(bytes, decryptAES.Key, decryptAES.IV);
+                cs.Close();
             }
-            return decryptedText;
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error by closing CryptoStream: " + ex.Message);
+            }
+            finally
+            {
+                fsOut.Close();
+                fsCrypt.Close();
+            }
         }
 
     }
