@@ -13,8 +13,7 @@ namespace SecureSoftwareDevCA
 {
     class Program
     {
-
-
+       // public byte[] AesKey = []{}
         static void Main(string[] args)
         {
 
@@ -96,7 +95,7 @@ namespace SecureSoftwareDevCA
                 {
                     menuSelection = "exit";
                 }
-                adminPassword = null;
+
 
             }
 
@@ -176,7 +175,10 @@ namespace SecureSoftwareDevCA
                     var line = reader.ReadLine();
                     var values = line.Split(',');
 
+                    //Customer tempCustomer = new Customer(getDecryptedString(values[0]), getDecryptedString(values[1]), getDecryptedString(values[2]), getDecryptedString(values[3]),
+                    //    getDecryptedString(values[4]), getDecryptedString(values[5]), getDecryptedString(values[6]), getDecryptedString(values[7]));
                     Customer tempCustomer = new Customer(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+
                     users.Add(tempCustomer);
                 }
             }
@@ -470,9 +472,22 @@ namespace SecureSoftwareDevCA
         {
             if (customers.GetType() == typeof(List<Customer>))
             {
+                List<Customer> encryptedCustomers = new List<Customer>() { };
+                customers.ForEach(customer =>
+                {
+                    Customer encryptedCustomer = new Customer(getEncryptedString(customer.Address),
+                      getEncryptedString(customer.IBAN), getEncryptedString(customer.LoanRemaining), getEncryptedString(customer.Password),
+                      getEncryptedString(customer.ID), getEncryptedString(customer.FirstName), getEncryptedString(customer.LastName), getEncryptedString(customer.EmailAddress));
+
+                    encryptedCustomers.Add(encryptedCustomer);
+
+
+                });
+
+
                 using (StreamWriter bank_accounts = new StreamWriter("loans.csv"))
                 {
-                    foreach (Customer customer in customers)
+                    foreach (Customer customer in encryptedCustomers)
                         bank_accounts.WriteLine(customer.Address + "," + customer.IBAN + "," + customer.LoanRemaining + "," + customer.Password + "," + customer.ID + "," + customer.FirstName + "," + customer.LastName + "," + customer.EmailAddress);
                 }
             }
@@ -565,7 +580,117 @@ namespace SecureSoftwareDevCA
             }
 
         }
+
+        static byte[] EncryptAES(string plainText, byte[] Key, byte[] IV)
+        {
+
+            if (plainText == null || plainText.Length <= 0)
+                throw new ArgumentNullException("plainText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+            byte[] encrypted;
+
+            
+            using (Aes aesEncrypt = Aes.Create())
+            {
+                //aesEncrypt.Mode = CipherMode.CBC;
+                //aesEncrypt.KeySize = 128;
+                //aesEncrypt.BlockSize = 128;
+                //aesEncrypt.FeedbackSize = 128;
+                //aesEncrypt.Padding = PaddingMode.Zeros;
+                aesEncrypt.Key = Key;
+                
+                aesEncrypt.IV = IV;
+
+
+                ICryptoTransform encryptor = aesEncrypt.CreateEncryptor(aesEncrypt.Key, aesEncrypt.IV);
+
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        {
+
+                            swEncrypt.Write(plainText);
+                        }
+                        encrypted = msEncrypt.ToArray();
+                    }
+                }
+            }
+
+
+            return encrypted;
+
+        }
+
+        static string DecryptAES(byte[] cipherText, byte[] Key, byte[] IV)
+        {
+
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+
+            string plaintext = null;
+
+            using (Aes aesDecrypt = Aes.Create())
+            {
+                //aesDecrypt.Mode = CipherMode.CBC;
+                //aesDecrypt.KeySize = 128;
+                //aesDecrypt.BlockSize = 128;
+                //aesDecrypt.FeedbackSize = 128;
+                //aesDecrypt.Padding = PaddingMode.Zeros;
+                aesDecrypt.Key = Key;
+                aesDecrypt.IV = IV;
+
+                ICryptoTransform decryptor = aesDecrypt.CreateDecryptor(aesDecrypt.Key, aesDecrypt.IV);
+
+                using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        {
+                            plaintext = srDecrypt.ReadToEnd();
+                        }
+                    }
+                }
+
+            }
+
+            return plaintext;
+
+        }
+
+        private static string getEncryptedString(string plaintext)
+        {
+
+            using (Aes myAes = Aes.Create())
+            {
+                return Encoding.Default.GetString(EncryptAES(plaintext, myAes.Key, myAes.IV));
+            }
+
+        }
+        private static string getDecryptedString(string text)
+        {
+            string decryptedText = "";
+
+            using (Aes decryptAES = Aes.Create())
+            {
+                byte[] bytes;
+                bytes = Encoding.Default.GetBytes(text);
+                decryptedText = DecryptAES(bytes, decryptAES.Key, decryptAES.IV);
+            }
+            return decryptedText;
+        }
+
     }
+
 
 
 
